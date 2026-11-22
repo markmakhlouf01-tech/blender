@@ -11,5 +11,5 @@ else
 fi
 fps=$(ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of csv=p=0 "$SRC")
 ffmpeg -y -framerate "$fps" -i "$OUT/frames/%04d.png" -i "$SRC" -map 0:v -map 1:a? \
-  -c:v libx264 -preset slow -crf 17 -pix_fmt yuv420p -movflags +faststart \
+  -c:v libx264 -preset slow -crf 21 -tune grain -pix_fmt yuv420p -movflags +faststart \
   -c:a aac -b:a 192k -shortest "$OUT/digital_refine.mp4"
