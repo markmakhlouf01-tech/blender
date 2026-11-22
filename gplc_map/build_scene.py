@@ -146,7 +146,7 @@ def setup_scene(scene, transparent=False, view="AgX"):
     r.resolution_percentage = RES_PCT
     r.fps = FPS
     r.film_transparent = transparent
-    scene.eevee.taa_render_samples = 24
+    scene.eevee.taa_render_samples = 8 if RES_PCT <= 50 else 24
     scene.view_settings.view_transform = view
     scene.view_settings.look = "None"
     scene.frame_start = 1
@@ -161,7 +161,7 @@ for ob in list(map_scene.objects):
     bpy.data.objects.remove(ob, do_unlink=True)
 setup_scene(map_scene)
 map_scene.frame_end = T["map_end"]
-map_scene.eevee.use_shadows = True
+map_scene.eevee.use_shadows = False   # normal-mapped relief reads the same; 2x faster
 map_scene.eevee.shadow_resolution_scale = 1.0
 map_scene.view_settings.look = "AgX - Medium High Contrast" if "AgX - Medium High Contrast" in [
     i.identifier for i in bpy.types.ColorManagedViewSettings.bl_rna.properties["look"].enum_items_static
@@ -608,7 +608,7 @@ map_scene.render.filepath = os.path.join(OUT, "frames_map", "")
 ui = bpy.data.scenes.new("UI")
 setup_scene(ui, transparent=True, view="Standard")
 ui.frame_end = T["end"]
-ui.eevee.taa_render_samples = 16
+ui.eevee.taa_render_samples = 8
 ucam_d = bpy.data.cameras.new("UICam")
 ucam_d.type = "ORTHO"
 ucam_d.ortho_scale = 19.2
