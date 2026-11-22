@@ -30,3 +30,17 @@ blender -b --factory-startup -P build_scene.py -- $DATA $OUT 50   # 50 = 540x960
 - `render_all.sh` – chunked render of both layers, then MP4 encode in the VSE
 
 Set `T["audio"]` in `timeline.py` to a music file to add it in the Edit scene.
+
+## Digital restyle
+`digital_refine.py` restyles a finished cut in the compositor only (no 3D):
+beat-synced punch-in zooms and shake, RGB split, slice and block glitches,
+bloom and star streaks on the route nodes, a cool grade, scanlines, a scan bar,
+a scrolling grid, a live HUD (timecode, frame counter, coordinates), grain,
+a pixel boot-up intro and a CRT power-off outro. Hit timing is the `HITS` list
+at the top of the script.
+
+```bash
+./render_digital.sh original.mp4 $OUT blender      # -> $OUT/digital_refine.mp4 (720x1280)
+```
+It also runs with the `bpy` wheel instead of a Blender install (`pip install bpy`,
+then pass that interpreter as the third argument).
