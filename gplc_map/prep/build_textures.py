@@ -106,26 +106,32 @@ Image.fromarray((land * 255).astype(np.uint8)).save(os.path.join(OUT, "land.png"
 
 # --- Night lights ------------------------------------------------------------
 print("lights")
-lights = Image.new("F", (W, H), 0.0)
-dr = ImageDraw.Draw(lights)
+layers = {k: Image.new("F", (W, H), 0.0) for k in ("core", "halo", "sub")}
+drw = {k: ImageDraw.Draw(v) for k, v in layers.items()}
 r = shapefile.Reader(os.path.join(D, "shp/ne_10m_populated_places_simple.shp"))
 fields = [f[0] for f in r.fields[1:]]
 ip = fields.index("pop_max")
 rng = np.random.default_rng(7)
-for rec, shp in zip(r.iterRecords(), r.iterShapes()):
-    lon, lat = shp.points[0]
+places = sorted(((max(rec[ip], 1000), shp.points[0]) for rec, shp in
+                 zip(r.iterRecords(), r.iterShapes())), key=lambda t: t[0])
+for pop, (lon, lat) in places:                      # ascending: big cities on top
     x, y = to_px(lon, lat)
     if not (0 <= x < W and 0 <= y < H):
         continue
-    pop = max(rec[ip], 1000)
-    rad = 0.8 + 1.1 * math.log10(pop / 1000.0)
-    val = min(1.0, 0.12 + 0.22 * math.log10(pop / 1000.0))
-    dr.ellipse([x - rad, y - rad, x + rad, y + rad], fill=val)
-    # scattered satellite towns around big cities
-    for _ in range(int(min(40, pop / 150000))):
-        ox, oy = rng.normal(0, rad * 2.5, 2)
-        rr = rng.uniform(0.6, 1.4)
-        dr.ellipse([x + ox - rr, y + oy - rr, x + ox + rr, y + oy + rr], fill=val * 0.5)
+    p = math.log10(pop / 1000.0)                    # 0 (1k) .. ~4.5 (30M)
+    big = max(0.0, p - 2.5)                         # > ~300k
+    rad = 0.55 + 0.45 * p + 1.1 * big ** 1.4
+    val = min(1.0, 0.04 + 0.11 * p + 0.3 * big)
+    drw["core"].ellipse([x - rad, y - rad, x + rad, y + rad], fill=val)
+    if big > 0.2:                                   # soft halo around major cities
+        hr = rad * 3.0
+        drw["halo"].ellipse([x - hr, y - hr, x + hr, y + hr], fill=val * 0.22)
+        for _ in range(int(min(60, pop / 120000))):  # suburbs / satellite towns
+            ox, oy = rng.normal(0, rad * 1.6, 2)
+            rr = rng.uniform(0.5, 1.2)
+            drw["sub"].ellipse([x + ox - rr, y + oy - rr, x + ox + rr, y + oy + rr], fill=val * 0.35)
+halo = blur(np.asarray(layers["halo"]), 4.0)
+lights_arr = np.maximum(np.asarray(layers["core"]), np.asarray(layers["sub"])) + halo
 roads = Image.new("F", (W, H), 0.0)
 rd = ImageDraw.Draw(roads)
 r = shapefile.Reader(os.path.join(D, "shp/ne_10m_roads.shp"))
@@ -135,7 +141,7 @@ for shp in r.iterShapes():
         pts = [to_px(*p) for p in shp.points[parts[i]:parts[i + 1]]]
         if len(pts) > 1:
             rd.line(pts, fill=0.035, width=1)
-l = np.asarray(lights) + np.asarray(roads)
+l = lights_arr + np.asarray(roads)
 l = blur(l, 1.2)
 l = l * land
 l = np.clip(l * 1.3, 0, 1) ** 1.2

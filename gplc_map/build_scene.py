@@ -294,7 +294,7 @@ bsdf.inputs["Specular IOR Level"].default_value = 0.08
 
 # city lights emission
 lights_strength = math_node(nt, "MULTIPLY", lit_tex.outputs[0], night.outputs[0], (-600, -500))
-lights_strength = math_node(nt, "MULTIPLY", lights_strength, 5.0, (-400, -500))
+lights_strength = math_node(nt, "MULTIPLY", lights_strength, 7.5, (-400, -500))
 link(nt, lights_strength, bsdf.inputs["Emission Strength"])
 bsdf.inputs["Emission Color"].default_value = (1.0, 0.42, 0.12, 1)
 
