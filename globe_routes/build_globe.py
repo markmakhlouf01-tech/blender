@@ -13,6 +13,7 @@ noise-free and stable from one frame to the next. Line and node sizes follow the
 camera distance so they stay the same on-screen width at every zoom.
 """
 import argparse
+import json
 import math
 import os
 import sys
@@ -346,6 +347,62 @@ for name, kind, f0, f1, wps in ROUTES:
         if isinstance(w, str):
             f = f0 + (f1 - f0) * ease_inv(cum[k] / total)
             arrival[w] = min(arrival.get(w, 1e9), f)
+
+# ---------------------------------------------------------------- Saudi border
+# Outer border only (prep/build_border.py), as a soft line: a thin dim core plus a
+# wide faint halo. Traces around the country during the dive, then stays.
+BORDER_DRAW = (54, 100)
+
+
+def border_points(path, step_deg=0.08):
+    ring = json.load(open(path))
+    out = []
+    for a, b in zip(ring, ring[1:]):
+        pa, pb = xyz(*a), xyz(*b)
+        n = max(1, int(math.degrees(pa.angle(pb)) / step_deg))
+        out += [pa.slerp(pb, i / n) if hasattr(pa, "slerp") else (pa.lerp(pb, i / n)).normalized()
+                for i in range(n)]
+    out.append(xyz(*ring[-1]))
+    return [p.normalized() * (R_LINE - 0.0004) for p in out]
+
+
+def soft_mat(name, strength, alpha):
+    m = bpy.data.materials.new(name)
+    t = m.node_tree
+    t.nodes.clear()
+    mixs = t.nodes.new("ShaderNodeMixShader")
+    mixs.inputs[0].default_value = alpha
+    t.links.new(node(t, "ShaderNodeBsdfTransparent").outputs[0], mixs.inputs[1])
+    t.links.new(node(t, "ShaderNodeEmission", Color=WHITE, Strength=strength).outputs[0], mixs.inputs[2])
+    t.links.new(mixs.outputs[0], node(t, "ShaderNodeOutputMaterial").inputs["Surface"])
+    return m
+
+
+border_file = os.path.join(args.data, "border_sau.json")
+if os.path.exists(border_file):
+    bpts = border_points(border_file)
+    for label, k, mat_b in (("Core", 0.00040, soft_mat("BorderCore", 0.85, 0.55)),
+                            ("Halo", 0.0016, soft_mat("BorderHalo", 0.8, 0.07))):
+        cu = bpy.data.curves.new("SaudiBorder" + label, "CURVE")
+        cu.dimensions = "3D"
+        cu.bevel_resolution = 4
+        cu.bevel_factor_mapping_end = "SPLINE"
+        sp = cu.splines.new("POLY")
+        sp.points.add(len(bpts) - 1)
+        for pt, co in zip(sp.points, bpts):
+            pt.co = (co.x, co.y, co.z, 1.0)
+        ob = bpy.data.objects.new("SaudiBorder" + label, cu)
+        ob.data.materials.append(mat_b)
+        lines.objects.link(ob)
+        ob.cycles.use_motion_blur = False
+        dist_driver(cu, "bevel_depth", k)
+        cu.bevel_factor_end = 0.0
+        cu.keyframe_insert("bevel_factor_end", frame=BORDER_DRAW[0])
+        cu.bevel_factor_end = 1.0
+        cu.keyframe_insert("bevel_factor_end", frame=BORDER_DRAW[1])
+        ease_keys(iter_fcurves(cu))
+else:
+    print("no border file:", border_file)
 
 # ---------------------------------------------------------------- nodes
 bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1.0)
