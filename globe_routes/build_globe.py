@@ -22,7 +22,7 @@ import bpy
 from mathutils import Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from routes import CAMERA, CITIES, FPS, FRAMES, HUBS, ROUTES  # noqa: E402
+from routes import CAMERA, CITIES, FPS, FRAMES, ROUTES  # noqa: E402
 
 argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
 ap = argparse.ArgumentParser()
@@ -38,7 +38,7 @@ args = ap.parse_args(argv)
 
 R_LINE = 1.002        # route / node altitude (globe radius = 1)
 LINE_PX = {"land": 0.00095, "sea": 0.00075}   # tube radius per unit camera distance
-DOT_K, HUB_K = 0.0034, 0.0044
+DOT_K = 0.0034        # node dot radius per unit camera distance (all nodes alike)
 WHITE = (1.0, 1.0, 1.0, 1.0)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -410,11 +410,6 @@ dot_mesh = bpy.context.active_object.data
 bpy.ops.object.shade_smooth()
 bpy.data.objects.remove(bpy.context.active_object)
 dot_mesh.materials.append(mat_dot)
-bpy.ops.mesh.primitive_torus_add(major_radius=2.4, minor_radius=0.16, major_segments=96, minor_segments=12)
-ring_mesh = bpy.context.active_object.data
-bpy.ops.object.shade_smooth()
-bpy.data.objects.remove(bpy.context.active_object)
-ring_mesh.materials.append(emission_mat("Ring", 2.2))
 
 nodes = bpy.data.collections.new("Nodes")
 scene.collection.children.link(nodes)
@@ -430,14 +425,10 @@ for city, f in sorted(arrival.items(), key=lambda kv: kv[1]):
     pivot.scale = (1, 1, 1)
     pivot.keyframe_insert("scale", frame=f + 5)
     ease_keys(iter_fcurves(pivot), "CUBIC", "EASE_OUT")
-    parts = [("Dot", dot_mesh, HUB_K if city in HUBS else DOT_K)]
-    if city in HUBS:
-        parts.append(("Ring", ring_mesh, HUB_K))
-    for label, mesh, k in parts:
-        ob = bpy.data.objects.new(f"{label} {city}", mesh)
-        ob.parent = pivot
-        nodes.objects.link(ob)
-        dist_driver(ob, "scale", k)
+    ob = bpy.data.objects.new("Dot " + city, dot_mesh)
+    ob.parent = pivot
+    nodes.objects.link(ob)
+    dist_driver(ob, "scale", DOT_K)
 
 # ---------------------------------------------------------------- render
 r = scene.render

@@ -26,8 +26,6 @@ CITIES = {
     "Kalgoorlie": (121.47, -30.75), "Jaipur": (75.79, 26.91),
 }
 
-# Ringed hubs (a clean static ring around the dot).
-HUBS = {"Riyadh", "Jeddah", "Dammam", "Mumbai", "Singapore", "Cape Town"}
 
 ROUTES = [
     # --- Saudi Arabia (close-up) ---

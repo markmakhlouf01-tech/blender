@@ -1,7 +1,7 @@
 # Globe routes (Blender)
 
 Rebuild of the 9:16 globe "trade routes" film with clean white route lines, solid
-node dots that pop once (no pulsing), and a faster camera with a clearer structure:
+small uniform node dots that pop once (no rings, no pulsing), and a faster camera with a clearer structure:
 
 | frames (24 fps) | shot |
 |---|---|
