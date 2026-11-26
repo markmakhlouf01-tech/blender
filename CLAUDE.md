@@ -27,8 +27,8 @@ blender -b "$OUT/gplc_on_the_map.blend" -P gplc_map/render_stills.py -- Map "$OU
 gplc_map/render_all.sh blender "$OUT/gplc_on_the_map.blend"
 ```
 
-EEVEE needs a GPU; cloud containers usually have none and no Blender install — render on the
-user's machine and say what was not run.
+No GPU is needed for previews: in the "Visual work" cloud environment Blender is installed and EEVEE
+renders on the CPU through Mesa (slow but fine for stills). Do full-length finals on the user's GPU machine.
 
 ## Rules (gplc_map)
 

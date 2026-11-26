@@ -5,8 +5,8 @@ description: Render a Blender scene headless (no UI) from the command line — p
 
 # Headless Blender render
 
-Status: written from the project's scripts; **not yet run end to end in a cloud session**
-(no Blender binary or GPU there). Note anything that differs when you first run it, and fix this file.
+Status: Blender 5.2.5 headless EEVEE and Cycles renders verified in a cloud container (CPU only,
+2026-11-26). The full gplc_map pipeline has not been run there yet (its `$DATA` is not in git).
 
 ## 0. Find Blender
 
@@ -17,11 +17,19 @@ B=${BLENDER:-$(command -v blender)}      # e.g. ~/blender-5.2.5-linux-x64/blende
 "$B" --version                           # gplc_map targets Blender 5.2
 ```
 
-If none is installed, ask the user before downloading one
-(`https://download.blender.org/release/Blender5.2/blender-5.2.x-linux-x64.tar.xz`, ~350 MB).
+The "Visual work" cloud environment's setup script installs it at `/opt/blender` (`blender` on PATH).
+Elsewhere, if none is installed, ask the user before downloading one:
 
-EEVEE needs a GPU (OpenGL/Vulkan). On a machine without one it may fail to create a context or
-be very slow on a software renderer — say so rather than guess; use the user's machine for real renders.
+```bash
+mkdir -p /opt/blender && curl -sSfL https://download.blender.org/release/Blender5.2/blender-5.2.5-linux-x64.tar.xz \
+  | tar xJ -C /opt/blender --strip-components=1
+```
+
+No GPU (cloud containers): EEVEE still renders through Mesa's CPU OpenGL once these are installed —
+`apt-get install -y libegl1 libgl1 libegl-mesa0 libgl1-mesa-dri libxkbcommon0 libxi6 libsm6`.
+Measured on 4 CPUs at 540x960: default cube 14 s with EEVEE (first render includes shader compile),
+3 s with Cycles at 8 samples. `EGL_BAD_MATCH` lines in the log are harmless if the image saves.
+Fine for stills and short previews; do full-length final renders on the user's GPU machine.
 
 ## 1. Generic .blend file
 
@@ -63,7 +71,9 @@ Look at stills with the Read tool and describe what changed; send the user the k
 
 ## Troubleshooting
 
-- `Error: Unable to open a display` / GPU context errors → no usable GPU; render on the user's machine.
+- `Couldn't open libEGL.so.1` → install the Mesa packages in §0.
+- Other GPU context errors → check the Mesa packages; otherwise render on the user's machine.
+- `cannot save: '//…png'` → `//` is relative to the .blend; with no saved file use an absolute path.
 - Long full renders: run `render_all.sh` in the background and keep each shell call under 10 minutes;
   the chunked script can be resumed by re-running a scene's frame range.
 - Missing `colors.json`, `lines.json`, `tex/*.png` → a `prep/` step was skipped.
